@@ -244,6 +244,11 @@ class FluentCRM_Conditional_Status_Submission_Handler {
 		}
 
 		$target_status = $this->resolve_target_status( $mapped_status, $data, $subscriber );
+		$has_explicit_status = ( '' !== $mapped_status );
+		if ( ! $has_explicit_status && isset( $data['fcs_force_status'] ) ) {
+			$has_explicit_status = ( '' !== $this->normalize_status( $data['fcs_force_status'] ) );
+		}
+
 		if ( '' !== $target_status ) {
 			$contact['status'] = $target_status;
 		}
@@ -258,7 +263,7 @@ class FluentCRM_Conditional_Status_Submission_Handler {
 				return false;
 			}
 
-			if ( '' === $mapped_status && isset( $entry->status ) && 'confirmed' === $entry->status && 'subscribed' !== $subscriber->status ) {
+			if ( ! $has_explicit_status && isset( $entry->status ) && 'confirmed' === $entry->status && 'subscribed' !== $subscriber->status ) {
 				$subscriber = $subscriber->updateStatus( 'subscribed' );
 			}
 
@@ -283,7 +288,7 @@ class FluentCRM_Conditional_Status_Submission_Handler {
 		$force_subscribed  = false;
 		$force_update      = false;
 
-		if ( '' !== $mapped_status ) {
+		if ( $has_explicit_status ) {
 			$force_update = true;
 		} else {
 			$force_subscribed = ! $has_double_opt_in && ( 'subscribed' !== $subscriber->status );
@@ -302,12 +307,12 @@ class FluentCRM_Conditional_Status_Submission_Handler {
 			return false;
 		}
 
-		if ( '' === $mapped_status && isset( $entry->status ) && 'confirmed' === $entry->status && 'subscribed' !== $subscriber->status ) {
+		if ( ! $has_explicit_status && isset( $entry->status ) && 'confirmed' === $entry->status && 'subscribed' !== $subscriber->status ) {
 			$subscriber = $subscriber->updateStatus( 'subscribed' );
 		}
 
-		if ( '' !== $mapped_status ) {
-			if ( 'pending' === $mapped_status && 'pending' === $subscriber->status ) {
+		if ( $has_explicit_status ) {
+			if ( 'pending' === $target_status && 'pending' === $subscriber->status ) {
 				$subscriber->sendDoubleOptinEmail();
 			}
 		} elseif ( $has_double_opt_in && in_array( $subscriber->status, array( 'pending', 'unsubscribed' ), true ) ) {

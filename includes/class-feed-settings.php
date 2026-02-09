@@ -88,14 +88,15 @@ class FluentCRM_Conditional_Status_Feed_Settings {
 				'require_list' => false,
 				'label'        => __( 'Status Mapping', 'fluentcrm-conditional-status' ),
 				'component'    => 'html_info',
-				'html_info'    => '<p><strong>' . esc_html__( 'Status mapping:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'In "Other Fields" (above), map Contact Property "Subscriber Status (Mapped Value)" to a form field/smartcode that resolves to a valid status slug (e.g. subscribed, pending, transactional). If "Enable Double opt-in for new contacts" is enabled below...', 'fluentcrm-conditional-status' ) . '</p>'
+				'html_info'    => '<p><strong>' . esc_html__( 'Status mapping:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'In "Other Fields", map Contact Property "Subscriber Status (Mapped Value)" to a form field/smartcode that resolves to a valid status slug (e.g. subscribed, pending, transactional).', 'fluentcrm-conditional-status' ) . '</p>'
 			);
 			array_splice( $fields_array, $other_fields_index + 1, 0, array( $mapping_info ) );
 			$mapping_info_pos = $other_fields_index + 1;
 		}
 
 		$force_status_key = 'fcs_force_status';
-		if ( false === $this->find_setting_index( $fields_array, $force_status_key ) ) {
+		$force_status_index = $this->find_setting_index( $fields_array, $force_status_key );
+		if ( false === $force_status_index ) {
 			$force_status_field = array(
 				'key'          => $force_status_key,
 				'require_list' => false,
@@ -105,7 +106,25 @@ class FluentCRM_Conditional_Status_Feed_Settings {
 				'options'      => $this->get_status_options(),
 				'tips'         => __( 'Optional. If mapped status is empty/invalid, this status is applied. Useful with multiple FluentCRM feeds + feed-level conditional logic.', 'fluentcrm-conditional-status' ),
 			);
-			array_splice( $fields_array, (int) $mapping_info_pos + 1, 0, array( $force_status_field ) );
+			$force_status_index = (int) $mapping_info_pos + 1;
+			array_splice( $fields_array, $force_status_index, 0, array( $force_status_field ) );
+		}
+
+		// Remove conflicting native status toggles to avoid ambiguous behavior.
+		$this->remove_setting_by_key( $fields_array, 'double_opt_in' );
+		$this->remove_setting_by_key( $fields_array, 'force_subscribe' );
+
+		$status_controls_info_key = 'fcs_status_controls_info';
+		if ( false === $this->find_setting_index( $fields_array, $status_controls_info_key ) ) {
+			$status_controls_info = array(
+				'key'          => $status_controls_info_key,
+				'require_list' => false,
+				'label'        => __( 'Status Controls', 'fluentcrm-conditional-status' ),
+				'component'    => 'html_info',
+				'html_info'    => '<p>' . esc_html__( 'This plugin controls status via "Subscriber Status (Mapped Value)" and "Fallback / Forced Status". To send double opt-in, set status to "pending".', 'fluentcrm-conditional-status' ) . '</p>',
+			);
+			$insert_at = false !== $force_status_index ? (int) $force_status_index + 1 : (int) $mapping_info_pos + 1;
+			array_splice( $fields_array, $insert_at, 0, array( $status_controls_info ) );
 		}
 
 		return $settings_fields;
@@ -125,6 +144,20 @@ class FluentCRM_Conditional_Status_Feed_Settings {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Remove a setting from the fields list by key.
+	 *
+	 * @param array  $settings Fields array (by reference).
+	 * @param string $key      Setting key.
+	 * @return void
+	 */
+	private function remove_setting_by_key( &$settings, $key ) {
+		$index = $this->find_setting_index( $settings, $key );
+		if ( false !== $index ) {
+			array_splice( $settings, (int) $index, 1 );
+		}
 	}
 
 	/**
