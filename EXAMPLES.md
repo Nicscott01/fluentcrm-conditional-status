@@ -13,7 +13,7 @@ Use this pattern when hidden fields cannot be conditionally controlled in your f
    - Feed B: `transactional`
 4. (Optional) Still map **Subscriber Status (Mapped Value)** from a form field when available. The mapped status has priority; fallback/forced status is used if mapping is empty/invalid.
 
-> Note: FluentForms feed smartcodes do not support inline fallback syntax in feed runtime parsing (for example `{inputs.crm_status|transactional}` does not provide a runtime default fallback).
+> Note: FluentForms feed smartcodes do not support inline fallback syntax in feed runtime parsing.
 
 ## Example 1: GDPR Marketing Consent Checkbox
 

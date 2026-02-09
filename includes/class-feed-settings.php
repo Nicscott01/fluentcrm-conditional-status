@@ -89,7 +89,7 @@ class FluentCRM_Conditional_Status_Feed_Settings {
 				'label'        => __( 'Status Mapping', 'fluentcrm-conditional-status' ),
 				'component'    => 'html_info',
 				'html_info'    => '<p><strong>' . esc_html__( 'Status mapping:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'In "Other Fields", map Contact Property "Subscriber Status (Mapped Value)" to a form field/smartcode that resolves to a valid status slug (e.g. subscribed, pending, transactional).', 'fluentcrm-conditional-status' ) . '</p>'
-					. '<p><strong>' . esc_html__( 'Smartcode fallback:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'FluentForms feed smartcodes do not support inline fallback/default syntax in this runtime parser. Use a form field that always has a value.', 'fluentcrm-conditional-status' ) . ' <code>{inputs.status_field|transactional}</code></p>'
+					. '<p><strong>' . esc_html__( 'Smartcode fallback:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'FluentForms feed smartcodes do not support inline fallback/default syntax in this runtime parser.', 'fluentcrm-conditional-status' ) . '</p>'
 					. '<p><strong>' . esc_html__( 'Recommended fallback approach:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'Use multiple FluentCRM feeds with feed-level conditional logic and set a per-feed "Fallback / Forced Status". This avoids relying on hidden-field conditional logic.', 'fluentcrm-conditional-status' ) . '</p>',
 			);
 			array_splice( $fields_array, $other_fields_index + 1, 0, array( $mapping_info ) );
