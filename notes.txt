@@ -1,1 +1,0 @@
-what if we take a different approach. Are we able to add a new "Other Fields" in the Fluent list? If so, we can add the "Status" field to that, and then allow for the user to configure the form field value to the appropriate status. the thing is, we need to then supress the fluent crm feed handler from setting its status to either Subscribed or Pending.

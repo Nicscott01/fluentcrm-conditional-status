@@ -1,0 +1,13 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local runtime/debug artifacts
+*.log
+
+# Local packaging artifacts
+*.zip
+build/
+dist/
