@@ -2,6 +2,19 @@
 
 This document provides real-world examples of how to use FluentCRM Conditional Status for FluentForms.
 
+## Status Mapping Example (No Hidden-Field Logic Required)
+
+Use this pattern when hidden fields cannot be conditionally controlled in your form builder setup.
+
+1. Create multiple FluentCRM feeds for the same form.
+2. Add feed-level conditional logic so each feed runs only for the intended branch (for example consent checked vs unchecked).
+3. In each feed, set **Fallback / Forced Status**:
+   - Feed A: `pending`
+   - Feed B: `transactional`
+4. (Optional) Still map **Subscriber Status (Mapped Value)** from a form field when available. The mapped status has priority; fallback/forced status is used if mapping is empty/invalid.
+
+> Note: FluentForms feed smartcodes do not support inline fallback syntax in feed runtime parsing (for example `{inputs.crm_status|transactional}` does not provide a runtime default fallback).
+
 ## Example 1: GDPR Marketing Consent Checkbox
 
 **Scenario**: You have a contact form with a marketing consent checkbox. Only users who check the box should receive marketing emails, and they must confirm via double opt-in. Others should only receive transactional emails.

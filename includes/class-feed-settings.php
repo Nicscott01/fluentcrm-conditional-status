@@ -2,7 +2,7 @@
 /**
  * Feed Settings Class
  *
- * Adds conditional status mapping settings to FluentCRM feed configuration.
+ * Adds status mapping options to FluentCRM feed configuration.
  *
  * @package FluentCRM_Conditional_Status
  */
@@ -40,185 +40,77 @@ class FluentCRM_Conditional_Status_Feed_Settings {
 	 * Constructor.
 	 */
 	private function __construct() {
-		// Add settings to FluentCRM feed.
-		add_filter( 'fluentform/get_integration_values_FluentCrm', array( $this, 'add_feed_settings' ), 10, 3 );
-		add_filter( 'fluentform/get_integration_defaults_FluentCrm', array( $this, 'add_feed_defaults' ), 10, 2 );
-
-		// Add custom CSS for better UI integration.
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		// Run after FluentCRM registers its default field set so our changes stick.
+		add_filter( 'fluentform/get_integration_settings_fields_fluentcrm', array( $this, 'add_status_mapping_fields' ), 20, 2 );
 	}
 
 	/**
-	 * Add custom feed settings fields.
+	 * Add status mapping option into FluentCRM's "Other Fields" mapper.
 	 *
-	 * @param array  $settings     The current feed settings.
-	 * @param object $feed         The feed object.
-	 * @param int    $form_id      The form ID.
-	 * @return array Modified settings.
+	 * @param array $settings_fields Existing settings fields.
+	 * @param int   $form_id         Form ID.
+	 * @return array
 	 */
-	public function add_feed_settings( $settings, $feed, $form_id ) {
-		// Get all form fields for the dropdown.
-		$form_fields = $this->get_form_fields( $form_id );
+	public function add_status_mapping_fields( $settings_fields, $form_id ) {
+		if ( isset( $settings_fields['fields'] ) && is_array( $settings_fields['fields'] ) ) {
+			$fields_array = &$settings_fields['fields'];
+		} else {
+			$fields_array = &$settings_fields;
+		}
 
-		// Add conditional status section after the list selection.
-		$list_index = $this->find_setting_index( $settings, 'list_id' );
+		if ( ! is_array( $fields_array ) ) {
+			return $settings_fields;
+		}
 
-		if ( false !== $list_index ) {
-			$conditional_settings = array(
+		$other_fields_index = $this->find_setting_index( $fields_array, 'other_fields' );
+		if ( false === $other_fields_index ) {
+			return $settings_fields;
+		}
+
+		if ( empty( $fields_array[ $other_fields_index ]['options'] ) || ! is_array( $fields_array[ $other_fields_index ]['options'] ) ) {
+			$fields_array[ $other_fields_index ]['options'] = array();
+		}
+
+		if ( ! isset( $fields_array[ $other_fields_index ]['options']['status'] ) ) {
+			$fields_array[ $other_fields_index ]['options'] = array_merge(
 				array(
-					'key'         => 'enable_conditional_status',
-					'label'       => __( 'Enable Conditional Status', 'fluentcrm-conditional-status' ),
-					'tips'        => __( 'Set subscriber status based on form field values', 'fluentcrm-conditional-status' ),
-					'component'   => 'checkbox-single',
-					'checkbox_label' => __( 'Enable conditional subscriber status mapping', 'fluentcrm-conditional-status' ),
+					'status' => __( 'Subscriber Status (Mapped Value)', 'fluentcrm-conditional-status' ),
 				),
-				array(
-					'key'            => 'conditional_status_field',
-					'label'          => __( 'Field to Check', 'fluentcrm-conditional-status' ),
-					'tips'           => __( 'Select the form field to determine subscriber status', 'fluentcrm-conditional-status' ),
-					'component'      => 'select',
-					'options'        => $form_fields,
-					'dependency'     => array(
-						'depends_on' => 'enable_conditional_status',
-						'operator'   => '==',
-						'value'      => true,
-					),
-				),
-				array(
-					'key'        => 'conditional_status_info',
-					'label'      => '',
-					'component'  => 'html_info',
-					'html_info'  => '<div class="ff_card_block" style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-						<h4 style="margin: 0 0 10px 0;">' . __( 'Status Mapping Logic', 'fluentcrm-conditional-status' ) . '</h4>
-						<p style="margin: 0 0 10px 0;">' . __( 'Define which subscriber status to use based on the selected field value:', 'fluentcrm-conditional-status' ) . '</p>
-						<ul style="margin: 0; padding-left: 20px;">
-							<li><strong>Subscribed:</strong> ' . __( 'Contact is fully subscribed (no confirmation needed)', 'fluentcrm-conditional-status' ) . '</li>
-							<li><strong>Pending:</strong> ' . __( 'Contact needs to confirm via double opt-in email', 'fluentcrm-conditional-status' ) . '</li>
-							<li><strong>Transactional:</strong> ' . __( 'Contact can receive transactional emails only', 'fluentcrm-conditional-status' ) . '</li>
-							<li><strong>Unsubscribed:</strong> ' . __( 'Contact is unsubscribed', 'fluentcrm-conditional-status' ) . '</li>
-							<li><strong>Bounced:</strong> ' . __( 'Email address has bounced', 'fluentcrm-conditional-status' ) . '</li>
-							<li><strong>Complained:</strong> ' . __( 'Contact has marked emails as spam', 'fluentcrm-conditional-status' ) . '</li>
-						</ul>
-					</div>',
-					'dependency' => array(
-						'depends_on' => 'enable_conditional_status',
-						'operator'   => '==',
-						'value'      => true,
-					),
-				),
-				array(
-					'key'        => 'status_if_true',
-					'label'      => __( 'Status if TRUE/Checked/Has Value', 'fluentcrm-conditional-status' ),
-					'tips'       => __( 'Status to set when checkbox is checked, radio/select has a value, or text field is not empty', 'fluentcrm-conditional-status' ),
-					'component'  => 'select',
-					'options'    => $this->get_subscriber_statuses(),
-					'dependency' => array(
-						'depends_on' => 'enable_conditional_status',
-						'operator'   => '==',
-						'value'      => true,
-					),
-				),
-				array(
-					'key'        => 'status_if_false',
-					'label'      => __( 'Status if FALSE/Unchecked/No Value', 'fluentcrm-conditional-status' ),
-					'tips'       => __( 'Status to set when checkbox is unchecked, radio/select is empty, or text field is empty', 'fluentcrm-conditional-status' ),
-					'component'  => 'select',
-					'options'    => $this->get_subscriber_statuses(),
-					'dependency' => array(
-						'depends_on' => 'enable_conditional_status',
-						'operator'   => '==',
-						'value'      => true,
-					),
-				),
+				$fields_array[ $other_fields_index ]['options']
 			);
-
-			// Insert after list selection.
-			array_splice( $settings, $list_index + 1, 0, $conditional_settings );
 		}
 
-		return $settings;
-	}
-
-	/**
-	 * Add default values for new settings.
-	 *
-	 * @param array $defaults The default settings.
-	 * @param int   $form_id  The form ID.
-	 * @return array Modified defaults.
-	 */
-	public function add_feed_defaults( $defaults, $form_id ) {
-		$defaults['enable_conditional_status'] = false;
-		$defaults['conditional_status_field']  = '';
-		$defaults['status_if_true']            = 'pending';
-		$defaults['status_if_false']           = 'transactional';
-
-		return $defaults;
-	}
-
-	/**
-	 * Get form fields for dropdown.
-	 *
-	 * @param int $form_id The form ID.
-	 * @return array Array of field options.
-	 */
-	private function get_form_fields( $form_id ) {
-		$fields  = array();
-		$form    = wpFluent()->table( 'fluentform_forms' )->find( $form_id );
-
-		if ( ! $form ) {
-			return $fields;
-		}
-
-		$form_fields = json_decode( $form->form_fields, true );
-
-		if ( ! $form_fields || ! isset( $form_fields['fields'] ) ) {
-			return $fields;
-		}
-
-		// Add empty option.
-		$fields[''] = __( '-- Select Field --', 'fluentcrm-conditional-status' );
-
-		// Parse form fields.
-		foreach ( $form_fields['fields'] as $field ) {
-			$field_type  = isset( $field['element'] ) ? $field['element'] : '';
-			$field_name  = isset( $field['attributes']['name'] ) ? $field['attributes']['name'] : '';
-			$field_label = isset( $field['settings']['label'] ) ? $field['settings']['label'] : $field_name;
-
-			// Include common input fields.
-			$allowed_types = array(
-				'input_checkbox',
-				'input_radio',
-				'select',
-				'input_text',
-				'input_email',
-				'input_number',
-				'textarea',
-				'gdpr-agreement',
-				'terms_and_condition',
+		$mapping_info_key = 'fcs_status_mapping_info';
+		$mapping_info_pos = $this->find_setting_index( $fields_array, $mapping_info_key );
+		if ( false === $mapping_info_pos ) {
+			$mapping_info = array(
+				'key'          => $mapping_info_key,
+				'require_list' => false,
+				'label'        => __( 'Status Mapping', 'fluentcrm-conditional-status' ),
+				'component'    => 'html_info',
+				'html_info'    => '<p><strong>' . esc_html__( 'Status mapping:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'In "Other Fields", map Contact Property "Subscriber Status (Mapped Value)" to a form field/smartcode that resolves to a valid status slug (e.g. subscribed, pending, transactional).', 'fluentcrm-conditional-status' ) . '</p>'
+					. '<p><strong>' . esc_html__( 'Smartcode fallback:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'FluentForms feed smartcodes do not support inline fallback/default syntax in this runtime parser. Use a form field that always has a value.', 'fluentcrm-conditional-status' ) . ' <code>{inputs.status_field|transactional}</code></p>'
+					. '<p><strong>' . esc_html__( 'Recommended fallback approach:', 'fluentcrm-conditional-status' ) . '</strong> ' . esc_html__( 'Use multiple FluentCRM feeds with feed-level conditional logic and set a per-feed "Fallback / Forced Status". This avoids relying on hidden-field conditional logic.', 'fluentcrm-conditional-status' ) . '</p>',
 			);
-
-			if ( $field_name && in_array( $field_type, $allowed_types, true ) ) {
-				$fields[ $field_name ] = $field_label . ' (' . $field_type . ')';
-			}
+			array_splice( $fields_array, $other_fields_index + 1, 0, array( $mapping_info ) );
+			$mapping_info_pos = $other_fields_index + 1;
 		}
 
-		return $fields;
-	}
+		$force_status_key = 'fcs_force_status';
+		if ( false === $this->find_setting_index( $fields_array, $force_status_key ) ) {
+			$force_status_field = array(
+				'key'          => $force_status_key,
+				'require_list' => false,
+				'label'        => __( 'Fallback / Forced Status', 'fluentcrm-conditional-status' ),
+				'component'    => 'select',
+				'placeholder'  => __( 'Choose a status', 'fluentcrm-conditional-status' ),
+				'options'      => $this->get_status_options(),
+				'tips'         => __( 'Optional. If mapped status is empty/invalid, this status is applied. Useful with multiple FluentCRM feeds + feed-level conditional logic.', 'fluentcrm-conditional-status' ),
+			);
+			array_splice( $fields_array, (int) $mapping_info_pos + 1, 0, array( $force_status_field ) );
+		}
 
-	/**
-	 * Get available subscriber statuses.
-	 *
-	 * @return array Array of status options.
-	 */
-	private function get_subscriber_statuses() {
-		return array(
-			'subscribed'    => __( 'Subscribed', 'fluentcrm-conditional-status' ),
-			'pending'       => __( 'Pending (Double Opt-In)', 'fluentcrm-conditional-status' ),
-			'transactional' => __( 'Transactional', 'fluentcrm-conditional-status' ),
-			'unsubscribed'  => __( 'Unsubscribed', 'fluentcrm-conditional-status' ),
-			'bounced'       => __( 'Bounced', 'fluentcrm-conditional-status' ),
-			'complained'    => __( 'Complained', 'fluentcrm-conditional-status' ),
-		);
+		return $settings_fields;
 	}
 
 	/**
@@ -238,31 +130,23 @@ class FluentCRM_Conditional_Status_Feed_Settings {
 	}
 
 	/**
-	 * Enqueue admin assets.
+	 * Get available status options for feed-level forced status.
 	 *
-	 * @param string $hook The current admin page hook.
+	 * @return array
 	 */
-	public function enqueue_admin_assets( $hook ) {
-		// Only load on FluentForms pages.
-		if ( false === strpos( $hook, 'fluent_forms' ) ) {
-			return;
+	private function get_status_options() {
+		$options = array(
+			'' => __( 'Disabled (use mapped/default behavior)', 'fluentcrm-conditional-status' ),
+		);
+
+		$statuses = function_exists( 'fluentcrm_subscriber_editable_statuses' )
+			? fluentcrm_subscriber_editable_statuses()
+			: array( 'subscribed', 'pending', 'unsubscribed', 'transactional' );
+
+		foreach ( $statuses as $status ) {
+			$options[ $status ] = ucfirst( str_replace( '_', ' ', (string) $status ) );
 		}
 
-		// Add inline CSS for better integration.
-		wp_add_inline_style(
-			'fluent_forms_admin',
-			'
-			.ff_conditional_status_section {
-				background: #f8f9fa;
-				padding: 15px;
-				border-radius: 4px;
-				margin: 15px 0;
-			}
-			.ff_conditional_status_section h4 {
-				margin: 0 0 10px 0;
-				color: #23282d;
-			}
-			'
-		);
+		return $options;
 	}
 }

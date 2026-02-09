@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: FluentCRM Conditional Status for FluentForms
- * Plugin URI: https://github.com/yourusername/fluentcrm-conditional-status
+ * Plugin URI: https://github.com/Nicscott01/fluentcrm-conditional-status
  * Description: Conditionally set FluentCRM subscriber status based on FluentForms field values. Set subscribers to Transactional, Pending, or Subscribed status based on form inputs like opt-in checkboxes.
  * Version: 1.0.0
- * Author: Your Name
- * Author URI: https://yourwebsite.com
+ * Author: Nic Scott
+ * Author URI: https://www.crearewebsolutions.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: fluentcrm-conditional-status
